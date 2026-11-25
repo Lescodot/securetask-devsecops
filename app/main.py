@@ -31,7 +31,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
-        response.headers["Cache-Control"] = "no-store"
+
+        sensitive_paths = (
+            "/register",
+            "/login",
+            "/me",
+            "/tasks"
+        )
+
+        if request.url.path.startswith(sensitive_paths):
+            response.headers["Cache-Control"] = "no-store"
+        else:
+            response.headers["Cache-Control"] = (
+                "public, max-age=0, must-revalidate"
+            )
 
         return response
 
