@@ -42,9 +42,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith(sensitive_paths):
             response.headers["Cache-Control"] = "no-store"
         else:
-            response.headers["Cache-Control"] = (
-                "public, max-age=0, must-revalidate"
-            )
+            response.headers["Cache-Control"] = "public, max-age=60"
 
         return response
 
@@ -91,6 +89,28 @@ def health():
     return {
         "status": "healthy"
     }
+
+
+@app.get("/robots.txt")
+def robots():
+    return Response(
+        content="User-agent: *\nAllow: /\n",
+        media_type="text/plain"
+    )
+
+
+@app.get("/sitemap.xml")
+def sitemap():
+    return Response(
+        content="""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>http://127.0.0.1:8000/</loc>
+    </url>
+</urlset>
+""",
+        media_type="application/xml"
+    )
 
 
 @app.post(
