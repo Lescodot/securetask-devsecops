@@ -1,0 +1,15 @@
+title = "SecureTask Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow only known non-secret development/test values"
+
+paths = [
+    '''(^|/)\.git/''',
+    '''(^|/)__pycache__/''',
+    '''(^|/)\.pytest_cache/''',
+    '''(^|/)\.venv/''',
+    '''(^|/)venv/'''
+]
