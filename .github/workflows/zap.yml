@@ -58,6 +58,7 @@ jobs:
         with:
           target: "http://127.0.0.1:8000"
           rules_file_name: ".zap/rules.tsv"
+          cmd_options: "-c .zap/rules.tsv"
           fail_action: true
           allow_issue_writing: false
           artifact_name: "zap_scan"
