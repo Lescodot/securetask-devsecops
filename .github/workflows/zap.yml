@@ -59,7 +59,7 @@ jobs:
           target: "http://127.0.0.1:8000"
           rules_file_name: ".zap/rules.tsv"
           fail_action: true
-          allow_issue_writing: true
+          allow_issue_writing: false
           issue_title: "ZAP Scan Baseline Report"
           artifact_name: "zap_scan"
 
