@@ -1,0 +1,66 @@
+name: OWASP ZAP Security Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    name: OWASP ZAP Baseline Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build SecureTask image
+        run: |
+          docker build \
+            --tag securetask-zap:${{ github.sha }} \
+            .
+
+      - name: Start ephemeral staging container
+        run: |
+          docker run \
+            --detach \
+            --name securetask-zap \
+            --publish 8000:8000 \
+            --env SECRET_KEY="${{ secrets.SECURETASK_TEST_SECRET }}" \
+            --env DATABASE_URL="sqlite:////data/securetask.db" \
+            securetask-zap:${{ github.sha }}
+
+      - name: Wait for application
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/health > /dev/null; then
+              echo "SecureTask staging is healthy."
+              exit 0
+            fi
+
+            echo "Waiting for SecureTask staging..."
+            sleep 2
+          done
+
+          echo "SecureTask staging failed to become healthy."
+          docker logs securetask-zap
+          exit 1
+
+      - name: Run OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: "http://127.0.0.1:8000"
+          fail_action: true
+
+      - name: Stop ephemeral staging container
+        if: always()
+        run: |
+          docker stop securetask-zap || true
+          docker rm securetask-zap || true
