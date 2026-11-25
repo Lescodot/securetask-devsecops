@@ -1,0 +1,30 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: securetask-web
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      DATABASE_URL: sqlite:////data/securetask.db
+
+    read_only: true
+
+    tmpfs:
+      - /tmp
+
+    volumes:
+      - securetask-data:/data
+
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  securetask-data:
