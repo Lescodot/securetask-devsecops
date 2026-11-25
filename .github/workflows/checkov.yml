@@ -21,10 +21,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Run Checkov
+      - name: Scan Dockerfile with Checkov
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: .
-          framework: dockerfile,docker_compose
+          file: Dockerfile
+          framework: dockerfile
+          quiet: false
+          soft_fail: false
+
+      - name: Scan Docker Compose with Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          file: docker-compose.yml
+          framework: yaml
           quiet: false
           soft_fail: false
