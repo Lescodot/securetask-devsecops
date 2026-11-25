@@ -1,0 +1,20 @@
+rules:
+  - id: securetask-insecure-http-request
+    languages:
+      - python
+    message: "Insecure HTTP request detected. Use HTTPS to protect data in transit."
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: requests.$METHOD($URL, ...)
+          - pattern: httpx.$METHOD($URL, ...)
+          - pattern: urllib.request.urlopen($URL, ...)
+      - metavariable-regex:
+          metavariable: $URL
+          regex: ^["']http://
+    metadata:
+      category: security
+      technology:
+        - python
+      cwe:
+        - "CWE-319: Cleartext Transmission of Sensitive Information"

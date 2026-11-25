@@ -1,0 +1,17 @@
+rules:
+  - id: securetask-insecure-debug
+    languages:
+      - python
+    message: "Insecure debug configuration detected. Debug mode should be disabled in production because it can expose sensitive information."
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: FastAPI(..., debug=True, ...)
+          - pattern: app.run(..., debug=True, ...)
+          - pattern: uvicorn.run(..., reload=True, ...)
+    metadata:
+      category: security
+      technology:
+        - python
+      cwe:
+        - "CWE-489: Active Debug Code"

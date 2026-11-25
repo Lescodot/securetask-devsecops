@@ -1,0 +1,14 @@
+rules:
+  - id: securetask-dangerous-subprocess-shell
+    languages:
+      - python
+    message: "Dangerous subprocess usage: shell=True can enable command injection. Avoid shell execution or use a fixed command with shell=False."
+    severity: ERROR
+    patterns:
+      - pattern: subprocess.$FUNC(..., shell=True, ...)
+    metadata:
+      category: security
+      technology:
+        - python
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command"

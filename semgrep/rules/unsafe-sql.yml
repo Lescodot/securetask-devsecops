@@ -1,0 +1,21 @@
+rules:
+  - id: securetask-unsafe-sql-construction
+    languages:
+      - python
+    message: "Potential SQL injection: SQL query is constructed using string formatting or concatenation. Use parameterized queries instead."
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: $QUERY = $PREFIX + $VALUE
+          - pattern: $QUERY = f"...{$VALUE}..."
+          - pattern: $QUERY = "...".format(...)
+          - pattern: $QUERY = "...%..." % $VALUE
+      - metavariable-regex:
+          metavariable: $QUERY
+          regex: (?i).*(query|sql|statement).*
+    metadata:
+      category: security
+      technology:
+        - python
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
