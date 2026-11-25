@@ -1,0 +1,135 @@
+name: Supply Chain Security Gate
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lescodot/securetask-devsecops
+
+jobs:
+  supply-chain:
+    name: Sign, Attest, and Verify SecureTask Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push SecureTask image
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Display immutable image digest
+        run: |
+          echo "Image:"
+          echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+
+          echo "Digest:"
+          echo "${{ steps.push.outputs.digest }}"
+
+      - name: Generate SLSA build provenance
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@main
+        with:
+          cosign-release: v3.0.2
+
+      - name: Sign container image with Cosign
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign sign \
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}"
+
+      - name: Verify Cosign signature
+        run: |
+          cosign verify \
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}" \
+            --certificate-identity-regexp="^https://github.com/Lescodot/securetask-devsecops/.github/workflows/.*@refs/heads/main$" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+
+      - name: Verify SLSA provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh attestation verify \
+            "oci://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}" \
+            --repo "${{ github.repository }}" \
+            --predicate-type "https://slsa.dev/provenance/v1"
+
+      - name: Build deliberately unsigned test image
+        run: |
+          docker build \
+            --build-arg UNSIGNED_TEST=1 \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:unsigned-test-${{ github.sha }} \
+            .
+
+      - name: Push deliberately unsigned test image
+        id: unsigned
+        run: |
+          docker push \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:unsigned-test-${{ github.sha }}
+
+      - name: Get unsigned image digest
+        id: unsigned_digest
+        run: |
+          UNSIGNED_DIGEST=$(docker inspect \
+            --format='{{index .RepoDigests 0}}' \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:unsigned-test-${{ github.sha }})
+
+          echo "digest=$UNSIGNED_DIGEST" >> "$GITHUB_OUTPUT"
+
+          echo "Unsigned image:"
+          echo "$UNSIGNED_DIGEST"
+
+      - name: Verify unsigned image is rejected
+        run: |
+          UNSIGNED_IMAGE="${{ steps.unsigned_digest.outputs.digest }}"
+
+          echo "Testing unsigned image:"
+          echo "$UNSIGNED_IMAGE"
+
+          set +e
+
+          cosign verify \
+            "$UNSIGNED_IMAGE" \
+            --certificate-identity-regexp="^https://github.com/Lescodot/securetask-devsecops/.github/workflows/.*@refs/heads/main$" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+
+          VERIFY_EXIT_CODE=$?
+
+          set -e
+
+          if [ "$VERIFY_EXIT_CODE" -eq 0 ]; then
+            echo "ERROR: Unsigned image was accepted."
+            exit 1
+          fi
+
+          echo "PASS: Unsigned image was rejected by Cosign."

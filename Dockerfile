@@ -1,8 +1,14 @@
 FROM python:3.12-slim
 
+ARG UNSIGNED_TEST=0
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
+
+LABEL org.opencontainers.image.title="SecureTask" \
+      org.opencontainers.image.description="Secure task management application" \
+      org.opencontainers.image.security-test="${UNSIGNED_TEST}"
 
 WORKDIR /app
 
