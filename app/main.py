@@ -29,21 +29,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         response = await call_next(request)
 
+        # Prevent MIME-type sniffing.
         response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Restrict resources to the same origin.
         response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+
+        # Require cross-origin resources to explicitly opt in.
         response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
 
-        sensitive_paths = (
-            "/register",
-            "/login",
-            "/me",
-            "/tasks"
-        )
+        # Isolate the browsing context from cross-origin windows.
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
 
-        if request.url.path.startswith(sensitive_paths):
-            response.headers["Cache-Control"] = "no-store"
-        else:
-            response.headers["Cache-Control"] = "public, max-age=60"
+        # Prevent caching of application responses.
+        response.headers["Cache-Control"] = "no-store"
 
         return response
 
@@ -119,7 +118,10 @@ def sitemap():
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED
 )
-def register(user: UserCreate, db: Session = Depends(get_db)):
+def register(
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
     existing_username = (
         db.query(models.User)
         .filter(models.User.username == user.username)
@@ -163,7 +165,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     "/login",
     response_model=TokenResponse
 )
-def login(user: UserLogin, db: Session = Depends(get_db)):
+def login(
+    user: UserLogin,
+    db: Session = Depends(get_db)
+):
     db_user = (
         db.query(models.User)
         .filter(models.User.username == user.username)
@@ -176,7 +181,10 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid username or password"
         )
 
-    if not pwd_context.verify(user.password, db_user.password_hash):
+    if not pwd_context.verify(
+        user.password,
+        db_user.password_hash
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password"
@@ -193,7 +201,9 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
 
 @app.get("/me")
-def get_me(current_user: models.User = Depends(get_current_user)):
+def get_me(
+    current_user: models.User = Depends(get_current_user)
+):
     return {
         "id": current_user.id,
         "username": current_user.username,
@@ -234,7 +244,9 @@ def get_tasks(
 ):
     tasks = (
         db.query(models.Task)
-        .filter(models.Task.owner_id == current_user.id)
+        .filter(
+            models.Task.owner_id == current_user.id
+        )
         .all()
     )
 
@@ -293,7 +305,9 @@ def update_task(
             detail="Task not found"
         )
 
-    update_data = task_update.model_dump(exclude_unset=True)
+    update_data = task_update.model_dump(
+        exclude_unset=True
+    )
 
     for field, value in update_data.items():
         setattr(task, field, value)
