@@ -1,6 +1,11 @@
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.middleware import Middleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from app import models
 from app.database import Base, engine, get_db
@@ -16,12 +21,42 @@ from app.schemas import (
 from app.security import create_access_token, get_current_user
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(
+        self,
+        request: Request,
+        call_next
+    ) -> Response:
+        response = await call_next(request)
+
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        response.headers["Cache-Control"] = "no-store"
+
+        return response
+
+
 Base.metadata.create_all(bind=engine)
+
+middleware = [
+    Middleware(
+        SecurityHeadersMiddleware
+    ),
+    Middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=[
+            "127.0.0.1",
+            "localhost",
+            "testserver"
+        ]
+    ),
+]
 
 app = FastAPI(
     title="SecureTask",
     description="Secure task management application for CSSS 441 Project 2",
     version="1.0.0",
+    middleware=middleware,
 )
 
 pwd_context = CryptContext(
