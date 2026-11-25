@@ -1,0 +1,38 @@
+name: CycloneDX SBOM
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag securetask-devsecops-web:${{ github.sha }} \
+            .
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0.24.3
+        with:
+          image: securetask-devsecops-web:${{ github.sha }}
+          format: cyclonedx-json
+          output-file: securetask-sbom.cdx.json
+          artifact-name: securetask-sbom-cyclonedx
+          syft-version: v1.57.2
+          upload-artifact: true
