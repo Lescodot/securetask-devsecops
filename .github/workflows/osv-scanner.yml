@@ -10,19 +10,11 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
+  security-events: write
   contents: read
 
 jobs:
   osv-scanner:
     name: OSV Dependency Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Run OSV-Scanner
-        uses: google/osv-scanner-action/osv-scanner-action@v2
-        with:
-          scan-args: |-
-            --lockfile=requirements.txt
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.1
