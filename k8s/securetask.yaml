@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: securetask-data
+  labels:
+    app: securetask
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: securetask
+  labels:
+    app: securetask
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: securetask
+
+  template:
+    metadata:
+      labels:
+        app: securetask
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: securetask
+          image: securetask:verified
+          imagePullPolicy: Never
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
+          env:
+            - name: DATABASE_URL
+              value: sqlite:////data/securetask.db
+
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: securetask-secrets
+                  key: SECRET_KEY
+
+            - name: ALGORITHM
+              value: "HS256"
+
+            - name: ACCESS_TOKEN_EXPIRE_MINUTES
+              value: "30"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          volumeMounts:
+            - name: securetask-data
+              mountPath: /data
+
+            - name: tmp
+              mountPath: /tmp
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: localhost
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: localhost
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+      volumes:
+        - name: securetask-data
+          persistentVolumeClaim:
+            claimName: securetask-data
+
+        - name: tmp
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: securetask
+  labels:
+    app: securetask
+spec:
+  selector:
+    app: securetask
+
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+
+  type: ClusterIP

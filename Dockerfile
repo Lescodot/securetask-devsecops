@@ -16,10 +16,10 @@ RUN apt-get update \
     && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --system appgroup \
-    && useradd --system --gid appgroup --create-home appuser \
+RUN groupadd --system --gid 10001 appgroup \
+    && useradd --system --uid 10001 --gid 10001 --create-home appuser \
     && mkdir -p /data \
-    && chown -R appuser:appgroup /data
+    && chown -R 10001:10001 /data
 
 COPY requirements.txt .
 
@@ -27,9 +27,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
-RUN chown -R appuser:appgroup /app
+RUN chown -R 10001:10001 /app
 
-USER appuser
+USER 10001:10001
 
 EXPOSE 8000
 
