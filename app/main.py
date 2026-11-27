@@ -1,11 +1,12 @@
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware import Middleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
 
 from app import models
 from app.database import Base, engine, get_db
@@ -75,6 +76,12 @@ pwd_context = CryptContext(
     deprecated="auto"
 )
 
+app.mount(
+    "/static",
+    StaticFiles(directory="app/static"),
+    name="static"
+)
+
 
 @app.get("/")
 def root():
@@ -82,6 +89,11 @@ def root():
         "application": "SecureTask",
         "status": "running"
     }
+
+
+@app.get("/app")
+def frontend():
+    return FileResponse("app/static/index.html")
 
 
 @app.get("/health")
@@ -105,7 +117,7 @@ def sitemap():
         content="""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-        <loc>http://127.0.0.1:8000/</loc>
+        <loc>http://127.0.0.1:8000/app</loc>
     </url>
 </urlset>
 """,
