@@ -11,6 +11,9 @@ services:
 
     environment:
       DATABASE_URL: sqlite:////data/securetask.db
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
 
     read_only: true
 
