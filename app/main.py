@@ -33,6 +33,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Prevent MIME-type sniffing.
         response.headers["X-Content-Type-Options"] = "nosniff"
 
+        # Prevent clickjacking.
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+
         # Restrict resources to the same origin.
         response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
 
@@ -41,6 +44,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Isolate the browsing context from cross-origin windows.
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+
+        # Restrict browser features that SecureTask does not use.
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), camera=(), microphone=()"
+        )
+
+        # Restrict where resources can be loaded from.
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self'; "
+            "img-src 'self' data:; "
+            "connect-src 'self'; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "frame-ancestors 'self'; "
+            "form-action 'self'"
+        )
 
         # Prevent caching of application responses.
         response.headers["Cache-Control"] = "no-store"

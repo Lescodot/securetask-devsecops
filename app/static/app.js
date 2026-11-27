@@ -301,30 +301,34 @@ function displayTasks(tasks) {
                 ${statusText}
             </span>
 
-            <div class="task-actions">
-
-                ${
-                    task.completed
-                    ? ""
-                    : `
-                        <button
-                            class="complete-button"
-                            onclick="completeTask(${task.id})"
-                        >
-                            Mark Complete
-                        </button>
-                    `
-                }
-
-                <button
-                    class="delete-button"
-                    onclick="deleteTask(${task.id})"
-                >
-                    Delete
-                </button>
-
-            </div>
+            <div class="task-actions"></div>
         `;
+
+        const actions = taskElement.querySelector(".task-actions");
+
+        if (!task.completed) {
+            const completeButton = document.createElement("button");
+
+            completeButton.className = "complete-button";
+            completeButton.textContent = "Mark Complete";
+
+            completeButton.addEventListener("click", () => {
+                completeTask(task.id);
+            });
+
+            actions.appendChild(completeButton);
+        }
+
+        const deleteButton = document.createElement("button");
+
+        deleteButton.className = "delete-button";
+        deleteButton.textContent = "Delete";
+
+        deleteButton.addEventListener("click", () => {
+            deleteTask(task.id);
+        });
+
+        actions.appendChild(deleteButton);
 
         taskList.appendChild(taskElement);
     });
